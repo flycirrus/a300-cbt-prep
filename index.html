@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f172a" />
+  <title>A300-600 CBT Prep</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="tag">A300-600</span>
+      <span class="brand-name">CBT Prep</span>
+    </div>
+    <button id="btnHome" class="btn btn-ghost" hidden>Menu</button>
+  </header>
+
+  <main class="wrap">
+
+    <!-- HOME -->
+    <section id="viewHome" class="view">
+      <div class="card">
+        <h1>Choose a set to study</h1>
+        <p id="loadedNote" class="muted"></p>
+
+        <h2 class="label">Question range</h2>
+        <div id="ranges" class="chips" role="group" aria-label="Question range"></div>
+
+        <div class="toggles">
+          <label class="switch"><input type="checkbox" id="tglShuffleQ" /> <span>Shuffle questions</span></label>
+          <label class="switch"><input type="checkbox" id="tglShuffleO" /> <span>Shuffle answers</span></label>
+        </div>
+
+        <div class="actions">
+          <button id="btnLearn" class="mode-btn">
+            <span class="mode-title">Learn</span>
+            <span class="mode-sub">One question at a time, instant feedback</span>
+          </button>
+          <button id="btnExam" class="mode-btn">
+            <span class="mode-title">Exam</span>
+            <span class="mode-sub">No feedback, score at the end</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- QUIZ -->
+    <section id="viewQuiz" class="view" hidden>
+      <div class="quizbar">
+        <div class="progress"><div id="progressFill" class="progress-fill"></div></div>
+        <span id="progressText" class="progress-text">1 / 1</span>
+        <span id="modeTag" class="pill">Learn</span>
+      </div>
+
+      <div class="card">
+        <div class="qhead">
+          <span id="qref" class="muted small"></span>
+          <span id="qbadge" class="badge" hidden>⚠ Check source</span>
+        </div>
+        <div id="qnote" class="note" hidden></div>
+        <h2 id="qtext" class="qtext"></h2>
+        <ul id="optionsList" class="options"></ul>
+
+        <div class="navrow">
+          <button id="btnPrev" class="btn btn-ghost">Back</button>
+          <button id="btnNext" class="btn btn-primary">Next</button>
+        </div>
+        <p class="muted small center kb">Keyboard: 1–6 select · Enter next</p>
+      </div>
+    </section>
+
+    <!-- RESULT -->
+    <section id="viewResult" class="view" hidden>
+      <div class="card center">
+        <h1>Result</h1>
+        <div id="scoreBig" class="score"></div>
+        <p id="scoreLine" class="muted"></p>
+        <div id="wrongWrap" hidden>
+          <h2 class="label left">Review your wrong answers</h2>
+          <div id="wrongList" class="wronglist"></div>
+        </div>
+        <div class="actions center-actions">
+          <button id="btnReviewWrong" class="btn btn-primary" hidden>Review wrong ones</button>
+          <button id="btnResultHome" class="btn btn-ghost">Back to menu</button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="foot muted small">Local / web study app · ⚠ questions still to be verified against the source</footer>
+
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
