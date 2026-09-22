@@ -68,6 +68,7 @@
         </div>
         <div id="qnote" class="note" hidden></div>
         <h2 id="qtext" class="qtext"></h2>
+        <img id="qimage" class="qimage" alt="Figure for this question" hidden />
         <ul id="optionsList" class="options"></ul>
 
         <div class="navrow">
@@ -97,7 +98,10 @@
 
   </main>
 
-  <footer class="foot muted small">Local / web study app · ⚠ questions still to be verified against the source</footer>
+  <footer class="foot muted small">
+    <span>A300-600 CBT Prep · <span id="appVersion"></span></span>
+    <button id="btnRefresh" class="btn-link" type="button" title="Clear cache and reload the newest version">↻ Update</button>
+  </footer>
 
   <script src="data.js"></script>
   <script src="app.js"></script>

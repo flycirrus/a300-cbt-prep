@@ -5,6 +5,9 @@
    ========================================================================= */
 'use strict';
 
+/* Bump on every deploy; shown in the footer and used to name the SW cache. */
+const APP_VERSION = '2026-09-22 · b7';
+
 const LETTERS = ['A', 'B', 'C', 'D', 'E', 'F'];
 const el = (id) => document.getElementById(id);
 
@@ -84,6 +87,7 @@ function normalize(raw, i) {
     confidence: q.confidence || 'high',
     flag: q.flag || null,
     page: q.page,
+    image: typeof q.image === 'string' ? q.image : null,
   };
 }
 
@@ -223,6 +227,12 @@ function renderQuestion() {
   el('qref').textContent =
     (grpLabel ? grpLabel + ' · ' : '') + `Q${qNum}` + (q.page ? ` · p.${q.page}` : '');
   el('qtext').textContent = q.question;
+
+  const img = el('qimage');
+  if (img) {
+    if (q.image) { img.src = q.image; img.hidden = false; }
+    else { img.hidden = true; img.removeAttribute('src'); }
+  }
 
   const warn = needsWarning(q);
   el('qbadge').hidden = !warn;
@@ -416,10 +426,33 @@ function onKeydown(e) {
   }
 }
 
+/* ---------- update / version ---------- */
+async function forceRefresh() {
+  const btn = el('btnRefresh');
+  if (btn) { btn.disabled = true; btn.textContent = '↻ …'; }
+  try {
+    if ('serviceWorker' in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map((r) => r.update().catch(() => {})));
+    }
+    if (window.caches && caches.keys) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map((k) => caches.delete(k)));
+    }
+  } catch (e) { /* ignore — reload anyway */ }
+  // cache-busting reload to guarantee the freshest files
+  const u = new URL(location.href);
+  u.searchParams.set('v', Date.now().toString());
+  location.replace(u.toString());
+}
+
 /* ---------- wire up ---------- */
 function init() {
   const data = window.CBT_DATA || {};
   ALL = (Array.isArray(data.questions) ? data.questions : []).map(normalize);
+
+  const ver = el('appVersion');
+  if (ver) ver.textContent = 'v ' + APP_VERSION;
 
   el('btnLearn').addEventListener('click', () => startSession('learn'));
   el('btnExam').addEventListener('click', () => startSession('exam'));
@@ -427,6 +460,8 @@ function init() {
   el('btnPrev').addEventListener('click', goPrev);
   el('btnHome').addEventListener('click', () => { buildHome(); showView('viewHome'); });
   el('btnResultHome').addEventListener('click', () => { buildHome(); showView('viewHome'); });
+  const btnRefresh = el('btnRefresh');
+  if (btnRefresh) btnRefresh.addEventListener('click', forceRefresh);
   document.addEventListener('keydown', onKeydown);
 
   buildHome();

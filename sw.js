@@ -3,7 +3,7 @@
    network-first strategy so an online visit always refreshes the cache. */
 'use strict';
 
-const CACHE = 'cbt-prep-v1';
+const CACHE = 'cbt-prep-v2';
 const ASSETS = [
   './',
   'index.html',
@@ -15,6 +15,7 @@ const ASSETS = [
   'icon-512.png',
   'icon-512-maskable.png',
   'apple-touch-icon.png',
+  'images/lvo-q5.png',
 ];
 
 self.addEventListener('install', (event) => {
