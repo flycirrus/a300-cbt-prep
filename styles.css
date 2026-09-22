@@ -66,17 +66,21 @@ h2.label.left { text-align: left; }
 .small { font-size: 13px; }
 .center { text-align: center; }
 
-/* Range chips */
-.chips { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+/* CBT group chips */
+.chips { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
 .chip {
-  padding: 14px 8px; text-align: center;
+  display: flex; flex-direction: column; gap: 3px;
+  padding: 12px 12px; text-align: left;
   background: var(--panel-2); color: var(--text);
   border: 1px solid var(--line); border-radius: 12px;
-  font-size: 15px; font-weight: 600; cursor: pointer;
+  cursor: pointer;
 }
-.chip small { display: block; font-weight: 400; color: var(--muted); font-size: 12px; margin-top: 2px; }
+.chip .chip-title { font-size: 15px; font-weight: 700; }
+.chip small { display: block; font-weight: 400; color: var(--muted); font-size: 12px; line-height: 1.35; }
+.chip .chip-count { font-weight: 600; color: var(--accent); margin-top: 1px; }
 .chip.active { background: var(--accent); color: #04203f; border-color: var(--accent); }
 .chip.active small { color: #0a2c52; }
+.chip.active .chip-count { color: #0a2c52; }
 
 /* Toggles */
 .toggles { display: flex; flex-wrap: wrap; gap: 16px 24px; margin: 18px 0 4px; }
@@ -172,7 +176,6 @@ h2.label.left { text-align: left; }
 @media (min-width: 620px) {
   h1 { font-size: 26px; }
   .qtext { font-size: 21px; }
-  .chips { grid-template-columns: repeat(5, 1fr); }
   .actions { flex-direction: row; }
   .mode-btn { flex: 1; }
   .center-actions { flex-direction: row; justify-content: center; }

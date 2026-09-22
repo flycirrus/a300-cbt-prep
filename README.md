@@ -35,7 +35,7 @@ set "Root Directory" to the folder that holds `index.html`, framework "Other".
 
 ## Features
 - Language: English
-- **Ranges** to study: All · 1–25 · 26–50 · 51–75 · 76–100
+- **CBT groups** to study: Alle Fragen · CBT A-1 … A-9 (grouped by the course CBTs — each block is a CBT that restarts its question numbering at 1 in the source PDF)
 - **Learn** mode: instant feedback (correct/incorrect highlighted)
 - **Exam** mode: no feedback, score + review of wrong answers at the end
 - Optional shuffle of questions and/or answers

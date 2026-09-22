@@ -8,14 +8,26 @@
 const LETTERS = ['A', 'B', 'C', 'D', 'E', 'F'];
 const el = (id) => document.getElementById(id);
 
-/* Ranges to study (by question id) */
+/* Study sets = the CBT groups from the course (block == a new CBT that
+   restarts its question numbering at 1 in the source PDF). */
 const RANGES = [
-  { key: 'all', label: 'All', sub: '1–100', from: 1,  to: 100 },
-  { key: 'r1',  label: '1–25',   sub: '25 Qs', from: 1,  to: 25  },
-  { key: 'r2',  label: '26–50',  sub: '25 Qs', from: 26, to: 50  },
-  { key: 'r3',  label: '51–75',  sub: '25 Qs', from: 51, to: 75  },
-  { key: 'r4',  label: '76–100', sub: '25 Qs', from: 76, to: 100 },
+  { key: 'all', label: 'Alle Fragen', sub: 'Komplettes Set', block: null },
+  { key: 'a1',  label: 'CBT A-1', sub: 'Aircraft General · Equipment', block: 1 },
+  { key: 'a2',  label: 'CBT A-2', sub: 'Flight Instruments · ECAM · Communications · APU', block: 2 },
+  { key: 'a3',  label: 'CBT A-3', sub: 'Electrical', block: 3 },
+  { key: 'a4',  label: 'CBT A-4', sub: 'Power Plant', block: 4 },
+  { key: 'a5',  label: 'CBT A-5', sub: 'Pneumatics · Air Conditioning', block: 5 },
+  { key: 'a6',  label: 'CBT A-6', sub: 'Hydraulics · Landing Gear · Flight Controls', block: 6 },
+  { key: 'a7',  label: 'CBT A-7', sub: 'Fuel', block: 7 },
+  { key: 'a8',  label: 'CBT A-8', sub: 'Ice & Rain · Fire Protection', block: 8 },
+  { key: 'a9',  label: 'CBT A-9', sub: 'Navigation · Autoflight · Flight Management', block: 9 },
 ];
+
+/* block number -> short CBT label, for the in-quiz question header */
+const BLOCK_LABEL = RANGES.reduce((m, r) => {
+  if (r.block != null) m[r.block] = r.label;
+  return m;
+}, {});
 
 let ALL = [];
 let selectedRange = RANGES[0];
@@ -58,6 +70,8 @@ function normalize(raw, i) {
   if (typeof ci !== 'number' || ci < 0 || ci >= options.length) ci = null;
   return {
     id: typeof q.id === 'number' ? q.id : i + 1,
+    block: typeof q.block === 'number' ? q.block : null,
+    source_q_num: typeof q.source_q_num === 'number' ? q.source_q_num : null,
     question: String(q.question || ''),
     options,
     correct_index: ci,
@@ -74,20 +88,25 @@ function isScorable(q) {
   return typeof q.correct_index === 'number';
 }
 function poolForRange(r) {
-  return ALL.filter((q) => q.id >= r.from && q.id <= r.to);
+  if (r.block == null) return ALL.slice();
+  return ALL.filter((q) => q.block === r.block);
 }
 
 /* ---------- home ---------- */
 function buildHome() {
-  el('loadedNote').textContent = `${ALL.length} questions loaded`;
+  el('loadedNote').textContent = `${ALL.length} Fragen · ${Object.keys(BLOCK_LABEL).length} CBT-Gruppen`;
 
   const box = el('ranges');
   box.innerHTML = '';
   RANGES.forEach((r) => {
+    const count = poolForRange(r).length;
     const b = document.createElement('button');
     b.type = 'button';
     b.className = 'chip' + (r.key === selectedRange.key ? ' active' : '');
-    b.innerHTML = `${r.label}<small>${r.sub}</small>`;
+    b.innerHTML =
+      `<span class="chip-title">${esc(r.label)}</span>` +
+      `<small class="chip-sub">${esc(r.sub)}</small>` +
+      `<small class="chip-count">${count} Fragen</small>`;
     b.addEventListener('click', () => {
       selectedRange = r;
       [...box.children].forEach((c) => c.classList.remove('active'));
@@ -129,7 +148,10 @@ function renderQuestion() {
   el('progressText').textContent = `${session.index + 1} / ${total}`;
   el('progressFill').style.width = `${((session.index + 1) / total) * 100}%`;
 
-  el('qref').textContent = `Question ${q.id}` + (q.page ? ` · source p.${q.page}` : '');
+  const grpLabel = q.block != null ? BLOCK_LABEL[q.block] : null;
+  const grpNum = q.source_q_num != null ? ` · Frage ${q.source_q_num}` : ` · Frage ${q.id}`;
+  el('qref').textContent =
+    (grpLabel ? grpLabel : 'Frage') + grpNum + (q.page ? ` · S.${q.page}` : '');
   el('qtext').textContent = q.question;
 
   const warn = needsWarning(q);
