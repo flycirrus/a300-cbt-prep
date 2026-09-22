@@ -10,27 +10,25 @@ const el = (id) => document.getElementById(id);
 
 /* Study sets = the CBT groups from the course (block == a new CBT that
    restarts its question numbering at 1 in the source PDF). */
-const RANGES = [
-  { key: 'all', label: 'Alle Fragen', sub: 'Komplettes Set', block: null },
-  { key: 'a1',  label: 'CBT A-1', sub: 'Aircraft General · Equipment', block: 1 },
-  { key: 'a2',  label: 'CBT A-2', sub: 'Flight Instruments · ECAM · Communications · APU', block: 2 },
-  { key: 'a3',  label: 'CBT A-3', sub: 'Electrical', block: 3 },
-  { key: 'a4',  label: 'CBT A-4', sub: 'Power Plant', block: 4 },
-  { key: 'a5',  label: 'CBT A-5', sub: 'Pneumatics · Air Conditioning', block: 5 },
-  { key: 'a6',  label: 'CBT A-6', sub: 'Hydraulics · Landing Gear · Flight Controls', block: 6 },
-  { key: 'a7',  label: 'CBT A-7', sub: 'Fuel', block: 7 },
-  { key: 'a8',  label: 'CBT A-8', sub: 'Ice & Rain · Fire Protection', block: 8 },
-  { key: 'a9',  label: 'CBT A-9', sub: 'Navigation · Autoflight · Flight Management', block: 9 },
+const GROUPS = [
+  { key: 'a1', label: 'CBT A-1', sub: 'Aircraft General · Equipment', block: 1 },
+  { key: 'a2', label: 'CBT A-2', sub: 'Flight Instruments · ECAM · Communications · APU', block: 2 },
+  { key: 'a3', label: 'CBT A-3', sub: 'Electrical', block: 3 },
+  { key: 'a4', label: 'CBT A-4', sub: 'Power Plant', block: 4 },
+  { key: 'a5', label: 'CBT A-5', sub: 'Pneumatics · Air Conditioning', block: 5 },
+  { key: 'a6', label: 'CBT A-6', sub: 'Hydraulics · Landing Gear · Flight Controls', block: 6 },
+  { key: 'a7', label: 'CBT A-7', sub: 'Fuel', block: 7 },
+  { key: 'a8', label: 'CBT A-8', sub: 'Ice & Rain · Fire Protection', block: 8 },
+  { key: 'a9', label: 'CBT A-9', sub: 'Navigation · Autoflight · Flight Management', block: 9 },
 ];
 
 /* block number -> short CBT label, for the in-quiz question header */
-const BLOCK_LABEL = RANGES.reduce((m, r) => {
-  if (r.block != null) m[r.block] = r.label;
-  return m;
-}, {});
+const BLOCK_LABEL = GROUPS.reduce((m, g) => { m[g.block] = g.label; return m; }, {});
 
 let ALL = [];
-let selectedRange = RANGES[0];
+/* Multi-select: allMode = every group; otherwise the chosen blocks. */
+let allMode = true;
+const selectedBlocks = new Set();
 
 const session = {
   mode: 'learn',
@@ -87,38 +85,87 @@ function needsWarning(q) {
 function isScorable(q) {
   return typeof q.correct_index === 'number';
 }
-function poolForRange(r) {
-  if (r.block == null) return ALL.slice();
-  return ALL.filter((q) => q.block === r.block);
+function selectedPool() {
+  if (allMode) return ALL.slice();
+  return ALL.filter((q) => selectedBlocks.has(q.block));
+}
+function countForBlock(block) {
+  return ALL.reduce((n, q) => n + (q.block === block ? 1 : 0), 0);
+}
+function isGroupActive(block) {
+  return allMode || selectedBlocks.has(block);
 }
 
 /* ---------- home ---------- */
+function toggleGroup(block) {
+  if (allMode) {
+    /* leaving "All" narrows the selection to just this group */
+    allMode = false;
+    selectedBlocks.clear();
+    selectedBlocks.add(block);
+  } else if (selectedBlocks.has(block)) {
+    selectedBlocks.delete(block);
+    if (selectedBlocks.size === 0) allMode = true; // never leave an empty pool
+  } else {
+    selectedBlocks.add(block);
+    if (selectedBlocks.size === GROUPS.length) { allMode = true; selectedBlocks.clear(); }
+  }
+  buildHome();
+}
+
 function buildHome() {
-  el('loadedNote').textContent = `${ALL.length} Fragen · ${Object.keys(BLOCK_LABEL).length} CBT-Gruppen`;
+  el('loadedNote').textContent =
+    `${ALL.length} questions · ${GROUPS.length} CBT groups`;
 
   const box = el('ranges');
   box.innerHTML = '';
-  RANGES.forEach((r) => {
-    const count = poolForRange(r).length;
+
+  /* "All" toggle chip */
+  const allBtn = document.createElement('button');
+  allBtn.type = 'button';
+  allBtn.className = 'chip chip-all' + (allMode ? ' active' : '');
+  allBtn.innerHTML =
+    `<span class="chip-head"><span class="chip-title">All questions</span>` +
+    `<span class="chip-count">${ALL.length}</span></span>` +
+    `<small class="chip-sub">Every CBT group</small>`;
+  allBtn.addEventListener('click', () => {
+    allMode = true;
+    selectedBlocks.clear();
+    buildHome();
+  });
+  box.appendChild(allBtn);
+
+  /* one chip per CBT group (multi-select) */
+  GROUPS.forEach((g) => {
     const b = document.createElement('button');
     b.type = 'button';
-    b.className = 'chip' + (r.key === selectedRange.key ? ' active' : '');
+    b.className = 'chip' + (isGroupActive(g.block) ? ' active' : '');
+    b.setAttribute('aria-pressed', String(isGroupActive(g.block)));
     b.innerHTML =
-      `<span class="chip-title">${esc(r.label)}</span>` +
-      `<small class="chip-sub">${esc(r.sub)}</small>` +
-      `<small class="chip-count">${count} Fragen</small>`;
-    b.addEventListener('click', () => {
-      selectedRange = r;
-      [...box.children].forEach((c) => c.classList.remove('active'));
-      b.classList.add('active');
-    });
+      `<span class="chip-head"><span class="chip-title">${esc(g.label)}</span>` +
+      `<span class="chip-count">${countForBlock(g.block)}</span></span>` +
+      `<small class="chip-sub">${esc(g.sub)}</small>`;
+    b.addEventListener('click', () => toggleGroup(g.block));
     box.appendChild(b);
   });
+
+  /* selection summary + start-button state */
+  const pool = selectedPool();
+  const sel = el('selInfo');
+  if (sel) {
+    sel.textContent = allMode
+      ? `All groups selected · ${pool.length} questions`
+      : `${selectedBlocks.size} group${selectedBlocks.size === 1 ? '' : 's'} selected · ${pool.length} questions`;
+  }
+  const disabled = pool.length === 0;
+  el('btnLearn').disabled = disabled;
+  el('btnExam').disabled = disabled;
 }
 
 /* ---------- session ---------- */
 function startSession(mode) {
-  const pool = poolForRange(selectedRange);
+  const pool = selectedPool();
+  if (pool.length === 0) return;
   session.mode = mode;
   session.index = 0;
   session.answers = {};
@@ -149,9 +196,9 @@ function renderQuestion() {
   el('progressFill').style.width = `${((session.index + 1) / total) * 100}%`;
 
   const grpLabel = q.block != null ? BLOCK_LABEL[q.block] : null;
-  const grpNum = q.source_q_num != null ? ` · Frage ${q.source_q_num}` : ` · Frage ${q.id}`;
+  const qNum = q.source_q_num != null ? q.source_q_num : q.id;
   el('qref').textContent =
-    (grpLabel ? grpLabel : 'Frage') + grpNum + (q.page ? ` · S.${q.page}` : '');
+    (grpLabel ? grpLabel + ' · ' : '') + `Q${qNum}` + (q.page ? ` · p.${q.page}` : '');
   el('qtext').textContent = q.question;
 
   const warn = needsWarning(q);
