@@ -32,6 +32,7 @@ const selectedBlocks = new Set();
 
 const session = {
   mode: 'learn',
+  review: false,
   questions: [],
   index: 0,
   answers: {},       // qid -> chosen original option index
@@ -167,6 +168,7 @@ function startSession(mode) {
   const pool = selectedPool();
   if (pool.length === 0) return;
   session.mode = mode;
+  session.review = false;
   session.index = 0;
   session.answers = {};
   session.revealed = {};
@@ -271,8 +273,10 @@ function onOptionClick(q, origIdx) {
 function goNext() {
   const last = session.index === session.questions.length - 1;
   if (last) {
-    if (session.mode === 'exam') finishExam();
-    else { buildHome(); showView('viewHome'); }
+    /* Reviewing a wrong-answer subset just returns to the menu; a real
+       Learn or Exam run shows the score summary (correct / wrong). */
+    if (session.review) { buildHome(); showView('viewHome'); }
+    else finishSession();
     return;
   }
   session.index++;
@@ -284,8 +288,8 @@ function goPrev() {
   renderQuestion();
 }
 
-/* ---------- exam result ---------- */
-function finishExam() {
+/* ---------- result (Learn + Exam) ---------- */
+function finishSession() {
   const scorable = session.questions.filter(isScorable);
   let correct = 0;
   const wrong = [];
@@ -297,10 +301,12 @@ function finishExam() {
   const total = scorable.length;
   const pct = total ? Math.round((correct / total) * 100) : 0;
 
+  el('resultTitle').textContent = session.mode === 'learn' ? 'Learn set complete' : 'Exam result';
   el('scoreBig').textContent = `${correct} / ${total}`;
   const skipped = session.questions.length - total;
   el('scoreLine').textContent =
-    `${pct}% correct` + (skipped ? ` · ${skipped} unscored (source unverified)` : '');
+    `${correct} correct · ${wrong.length} wrong · ${pct}%` +
+    (skipped ? ` · ${skipped} unscored (source unverified)` : '');
 
   const wrongWrap = el('wrongWrap');
   const btnReview = el('btnReviewWrong');
@@ -333,6 +339,7 @@ function displayPosOf(q, origIdx) {
 
 function reviewSingle(q) {
   session.mode = 'learn';
+  session.review = true;
   session.questions = [q];
   session.index = 0;
   session.revealed = { [q.id]: true };
@@ -343,6 +350,7 @@ function reviewSingle(q) {
 
 function reviewWrong(wrong) {
   session.mode = 'learn';
+  session.review = true;
   session.questions = wrong.slice();
   session.index = 0;
   session.revealed = {};
