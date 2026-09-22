@@ -188,10 +188,11 @@ h2.label.left { text-align: left; }
 }
 .wrong-item:active { transform: scale(.995); }
 
-.foot {
-  max-width: 760px; margin: 8px auto 24px; padding: 0 16px; text-align: center;
-  display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px 12px;
-}
+.foot { max-width: 760px; margin: 8px auto 24px; padding: 0 16px; text-align: center; }
+
+/* menu top row: version (left) + update button (right) */
+.home-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+
 .btn-link {
   font: inherit; font-size: 13px; cursor: pointer;
   background: var(--panel-2); color: var(--accent);

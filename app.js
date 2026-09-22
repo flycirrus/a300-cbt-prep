@@ -5,8 +5,8 @@
    ========================================================================= */
 'use strict';
 
-/* Bump on every deploy; shown in the footer and used to name the SW cache. */
-const APP_VERSION = '2026-09-22 · b8';
+/* Bump on every deploy; shown on the menu and used to name the SW cache. */
+const APP_VERSION = 'b20';
 
 const LETTERS = ['A', 'B', 'C', 'D', 'E', 'F'];
 const el = (id) => document.getElementById(id);
@@ -460,7 +460,7 @@ function init() {
   ALL = (Array.isArray(data.questions) ? data.questions : []).map(normalize);
 
   const ver = el('appVersion');
-  if (ver) ver.textContent = 'v ' + APP_VERSION;
+  if (ver) ver.textContent = 'Version ' + APP_VERSION;
 
   el('btnLearn').addEventListener('click', () => startSession('learn'));
   el('btnExam').addEventListener('click', () => startSession('exam'));

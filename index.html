@@ -27,6 +27,10 @@
 
     <!-- HOME -->
     <section id="viewHome" class="view">
+      <div class="home-top">
+        <span id="appVersion" class="muted small"></span>
+        <button id="btnRefresh" class="btn-link" type="button" title="Clear cache and reload the newest version">↻ Update</button>
+      </div>
       <div class="card">
         <h1>Choose a set to study</h1>
         <p id="loadedNote" class="muted"></p>
@@ -98,10 +102,7 @@
 
   </main>
 
-  <footer class="foot muted small">
-    <span>A300-600 CBT Prep · <span id="appVersion"></span></span>
-    <button id="btnRefresh" class="btn-link" type="button" title="Clear cache and reload the newest version">↻ Update</button>
-  </footer>
+  <footer class="foot muted small">A300-600 CBT Prep · ⚠ questions still to be verified against the source</footer>
 
   <script src="data.js"></script>
   <script src="app.js"></script>
