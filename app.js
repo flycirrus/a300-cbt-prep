@@ -20,6 +20,7 @@ const GROUPS = [
   { key: 'a7', label: 'CBT A-7', sub: 'Fuel', block: 7 },
   { key: 'a8', label: 'CBT A-8', sub: 'Ice & Rain · Fire Protection', block: 8 },
   { key: 'a9', label: 'CBT A-9', sub: 'Navigation · Autoflight · Flight Management', block: 9 },
+  { key: 'lvo', label: 'LVO', sub: 'Low Visibility Operations', block: 10 },
 ];
 
 /* block number -> short CBT label, for the in-quiz question header */
@@ -67,24 +68,44 @@ function normalize(raw, i) {
   const options = Array.isArray(q.options) ? q.options.map(String) : [];
   let ci = q.correct_index;
   if (typeof ci !== 'number' || ci < 0 || ci >= options.length) ci = null;
+  const multi = q.multi === true;
+  let cis = Array.isArray(q.correct_indices)
+    ? q.correct_indices.filter((n) => typeof n === 'number' && n >= 0 && n < options.length)
+    : [];
   return {
     id: typeof q.id === 'number' ? q.id : i + 1,
     block: typeof q.block === 'number' ? q.block : null,
     source_q_num: typeof q.source_q_num === 'number' ? q.source_q_num : null,
     question: String(q.question || ''),
     options,
+    multi,
     correct_index: ci,
+    correct_indices: cis,
     confidence: q.confidence || 'high',
     flag: q.flag || null,
     page: q.page,
   };
 }
 
-function needsWarning(q) {
-  return q.flag != null || q.confidence !== 'high' || q.correct_index == null;
-}
 function isScorable(q) {
-  return typeof q.correct_index === 'number';
+  return q.multi ? q.correct_indices.length > 0 : typeof q.correct_index === 'number';
+}
+function needsWarning(q) {
+  return q.flag != null || q.confidence !== 'high' || !isScorable(q);
+}
+/* current selection for a question: array (multi) or number/undefined (single) */
+function selectionOf(q) {
+  const a = session.answers[q.id];
+  if (q.multi) return Array.isArray(a) ? a : [];
+  return a;
+}
+function answeredCorrect(q) {
+  if (q.multi) {
+    const sel = selectionOf(q);
+    const cor = q.correct_indices;
+    return sel.length === cor.length && cor.every((i) => sel.includes(i));
+  }
+  return session.answers[q.id] === q.correct_index;
 }
 function selectedPool() {
   if (allMode) return ALL.slice();
@@ -213,7 +234,9 @@ function renderQuestion() {
 
   el('btnPrev').disabled = session.index === 0;
   const last = session.index === total - 1;
-  if (session.mode === 'exam') {
+  if (q.multi && session.mode === 'learn' && !session.revealed[q.id]) {
+    el('btnNext').textContent = 'Check';       // reveal multi-response first
+  } else if (session.mode === 'exam') {
     el('btnNext').textContent = last ? 'Finish exam' : 'Next';
   } else {
     el('btnNext').textContent = last ? 'Finish' : 'Next';
@@ -222,9 +245,12 @@ function renderQuestion() {
 
 function renderOptions(q) {
   const ul = el('optionsList');
+  ul.className = 'options' + (q.multi ? ' multi' : '');
   ul.innerHTML = '';
   const order = session.optionOrder[q.id] || q.options.map((_, i) => i);
-  const chosen = session.answers[q.id];
+  const sel = selectionOf(q);                       // array (multi) or number/undefined
+  const isChosen = (i) => (q.multi ? sel.includes(i) : sel === i);
+  const isCorrect = (i) => (q.multi ? q.correct_indices.includes(i) : i === q.correct_index);
   const revealed = session.mode === 'learn' && session.revealed[q.id];
 
   order.forEach((origIdx, pos) => {
@@ -239,16 +265,16 @@ function renderOptions(q) {
 
     if (revealed) {
       btn.disabled = true;
-      if (isScorable(q) && origIdx === q.correct_index) {
+      if (isScorable(q) && isCorrect(origIdx)) {
         btn.classList.add('correct');
         btn.querySelector('.mark').textContent = '✓';
       }
-      if (chosen === origIdx && origIdx !== q.correct_index) {
+      if (isChosen(origIdx) && !isCorrect(origIdx)) {
         btn.classList.add('wrong');
         btn.querySelector('.mark').textContent = '✗';
       }
-    } else if (chosen === origIdx) {
-      btn.classList.add('selected'); // exam mode: show selection only
+    } else if (isChosen(origIdx)) {
+      btn.classList.add('selected'); // selection only (exam, or multi before Check)
     }
 
     btn.addEventListener('click', () => onOptionClick(q, origIdx));
@@ -258,6 +284,16 @@ function renderOptions(q) {
 }
 
 function onOptionClick(q, origIdx) {
+  if (q.multi) {
+    // multi-response: toggle selection; reveal happens later via "Check"
+    if (session.mode === 'learn' && session.revealed[q.id]) return;
+    const cur = Array.isArray(session.answers[q.id]) ? session.answers[q.id].slice() : [];
+    const at = cur.indexOf(origIdx);
+    if (at >= 0) cur.splice(at, 1); else cur.push(origIdx);
+    session.answers[q.id] = cur;
+    renderOptions(q);
+    return;
+  }
   if (session.mode === 'learn') {
     if (session.revealed[q.id]) return;
     session.answers[q.id] = origIdx;
@@ -271,6 +307,13 @@ function onOptionClick(q, origIdx) {
 
 /* ---------- navigation ---------- */
 function goNext() {
+  const q = session.questions[session.index];
+  // multi-response in learn mode: first "Check" reveals before advancing
+  if (q.multi && session.mode === 'learn' && !session.revealed[q.id]) {
+    session.revealed[q.id] = true;
+    renderQuestion();
+    return;
+  }
   const last = session.index === session.questions.length - 1;
   if (last) {
     /* Reviewing a wrong-answer subset just returns to the menu; a real
@@ -294,8 +337,7 @@ function finishSession() {
   let correct = 0;
   const wrong = [];
   scorable.forEach((q) => {
-    const chosen = session.answers[q.id];
-    if (chosen === q.correct_index) correct++;
+    if (answeredCorrect(q)) correct++;
     else wrong.push(q);
   });
   const total = scorable.length;
@@ -316,9 +358,12 @@ function finishSession() {
     wrong.forEach((q) => {
       const d = document.createElement('div');
       d.className = 'wrong-item';
-      const ci = q.correct_index;
+      const correctIdx = q.multi ? q.correct_indices : [q.correct_index];
+      const answer = correctIdx
+        .map((ci) => `${LETTERS[displayPosOf(q, ci)] || '?'}) ${esc(q.options[ci])}`)
+        .join('<br>');
       d.innerHTML = `<strong>Q${q.id}.</strong> ${esc(q.question)}<br>` +
-        `<span class="muted small">Correct: ${LETTERS[displayPosOf(q, ci)] || '?'}) ${esc(q.options[ci])}</span>`;
+        `<span class="muted small">Correct: ${answer}</span>`;
       d.addEventListener('click', () => reviewSingle(q));
       list.appendChild(d);
     });

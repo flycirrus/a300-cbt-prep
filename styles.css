@@ -156,6 +156,8 @@ h2.label.left { text-align: left; }
   display: grid; place-items: center;
 }
 .option .txt { flex: 1; }
+/* multi-response: square keys hint "select all that apply" */
+.options.multi .option .key { border-radius: 4px; }
 .option .mark { flex: 0 0 auto; font-weight: 800; font-size: 18px; }
 .option.selected { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
 .option.correct { background: var(--green-bg); border-color: var(--green); }
