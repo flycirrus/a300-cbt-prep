@@ -6,7 +6,7 @@
 'use strict';
 
 /* Bump on every deploy; shown in the footer and used to name the SW cache. */
-const APP_VERSION = '2026-09-22 · b7';
+const APP_VERSION = '2026-09-22 · b8';
 
 const LETTERS = ['A', 'B', 'C', 'D', 'E', 'F'];
 const el = (id) => document.getElementById(id);
@@ -230,8 +230,16 @@ function renderQuestion() {
 
   const img = el('qimage');
   if (img) {
-    if (q.image) { img.src = q.image; img.hidden = false; }
-    else { img.hidden = true; img.removeAttribute('src'); }
+    if (q.image) {
+      img.onerror = () => { img.hidden = true; };  // hide gracefully if it fails to load
+      img.onload = () => { img.hidden = false; };
+      img.hidden = false;
+      img.src = q.image;
+    } else {
+      img.onerror = null;
+      img.hidden = true;
+      img.removeAttribute('src');
+    }
   }
 
   const warn = needsWarning(q);

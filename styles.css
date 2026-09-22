@@ -145,6 +145,8 @@ h2.label.left { text-align: left; }
   display: block; max-width: 100%; height: auto; margin: 0 0 16px;
   border: 1px solid var(--line); border-radius: 10px; background: #fff;
 }
+/* respect the hidden attribute (a bare `.qimage` display rule would override it) */
+.qimage[hidden] { display: none; }
 
 /* Options */
 .options { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
