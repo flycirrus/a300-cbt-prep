@@ -3,7 +3,7 @@
    network-first strategy so an online visit always refreshes the cache. */
 'use strict';
 
-const CACHE = 'cbt-prep-v4';
+const CACHE = 'cbt-prep-v5';
 const ASSETS = [
   './',
   'index.html',

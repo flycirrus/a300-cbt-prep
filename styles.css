@@ -210,3 +210,18 @@ h2.label.left { text-align: left; }
   .center-actions { flex-direction: row; justify-content: center; }
   .center-actions .btn { flex: 0 1 auto; }
 }
+
+/* ---------- Progress / stats ---------- */
+.full { width: 100%; margin-top: 12px; }
+.chapters { display: flex; flex-direction: column; gap: 10px; margin-bottom: 10px; }
+.chap-row { text-align: left; }
+.chap-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 5px; font-size: 14px; }
+.chap-bar { height: 9px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.chap-fill { height: 100%; width: 0; background: var(--accent); border-radius: 6px; transition: width .25s ease; }
+.chap-fill.bar-best { background: var(--green); }
+.chap-fill.bar-worst { background: var(--red); }
+.tag-best, .tag-worst { font-size: 10px; font-weight: 800; letter-spacing: .5px; padding: 1px 6px; border-radius: 6px; margin-left: 6px; vertical-align: middle; }
+.tag-best { color: var(--green); background: var(--green-bg); }
+.tag-worst { color: var(--red); background: var(--red-bg); }
+.btn-link.danger { color: var(--red); background: transparent; }
+#statsOverall { margin: 6px 0 4px; }

@@ -54,6 +54,8 @@
             <span class="mode-sub">No feedback, score at the end</span>
           </button>
         </div>
+
+        <button id="btnStats" class="btn btn-ghost full" type="button">📊 My progress &amp; weak spots</button>
       </div>
     </section>
 
@@ -97,6 +99,30 @@
           <button id="btnReviewWrong" class="btn btn-primary" hidden>Review wrong ones</button>
           <button id="btnResultHome" class="btn btn-ghost">Back to menu</button>
         </div>
+      </div>
+    </section>
+
+    <!-- STATS / PROGRESS -->
+    <section id="viewStats" class="view" hidden>
+      <div class="card">
+        <h1>My progress</h1>
+        <p class="muted small">Saved on this device · works offline</p>
+
+        <div id="statsOverall" class="center"></div>
+
+        <h2 class="label left">By chapter — best &amp; weakest</h2>
+        <div id="statsChapters" class="chapters"></div>
+
+        <div id="statsHardWrap" hidden>
+          <h2 class="label left">Hardest questions (most wrong)</h2>
+          <div id="statsHard" class="wronglist"></div>
+        </div>
+
+        <div class="actions center-actions">
+          <button id="btnDrillWeak" class="btn btn-primary" hidden>Drill my weak spots</button>
+          <button id="btnStatsHome" class="btn btn-ghost">Back to menu</button>
+        </div>
+        <p class="center"><button id="btnResetStats" class="btn-link danger" type="button">Reset progress</button></p>
       </div>
     </section>
 

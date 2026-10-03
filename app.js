@@ -6,7 +6,32 @@
 'use strict';
 
 /* Bump on every deploy; shown on the menu and used to name the SW cache. */
-const APP_VERSION = 'b20';
+const APP_VERSION = 'b21';
+
+/* Persistent progress stats (per device, offline via localStorage).
+   perQ: { [qid]: { seen, wrong, correct, lastResult, lastTs } } */
+const STATS_KEY = 'cbt-prep.stats.v1';
+function loadStats() {
+  try { return JSON.parse(localStorage.getItem(STATS_KEY)) || { perQ: {} }; }
+  catch (_) { return { perQ: {} }; }
+}
+function saveStats(s) {
+  try { localStorage.setItem(STATS_KEY, JSON.stringify(s)); } catch (_) {}
+}
+/* Record the scorable results of a finished Learn/Exam run. */
+function recordRun(scorable) {
+  const stats = loadStats();
+  const perQ = stats.perQ || (stats.perQ = {});
+  scorable.forEach((q) => {
+    const r = perQ[q.id] || { seen: 0, wrong: 0, correct: 0 };
+    r.seen++;
+    if (answeredCorrect(q)) { r.correct++; r.lastResult = 'correct'; }
+    else { r.wrong++; r.lastResult = 'wrong'; }
+    r.lastTs = Date.now();
+    perQ[q.id] = r;
+  });
+  saveStats(stats);
+}
 
 const LETTERS = ['A', 'B', 'C', 'D', 'E', 'F'];
 const el = (id) => document.getElementById(id);
@@ -47,7 +72,7 @@ const session = {
 
 /* ---------- helpers ---------- */
 function showView(id) {
-  ['viewHome', 'viewQuiz', 'viewResult'].forEach((v) => { el(v).hidden = (v !== id); });
+  ['viewHome', 'viewQuiz', 'viewResult', 'viewStats'].forEach((v) => { el(v).hidden = (v !== id); });
   el('btnHome').hidden = (id === 'viewHome');
   window.scrollTo(0, 0);
 }
@@ -190,8 +215,16 @@ function buildHome() {
 
 /* ---------- session ---------- */
 function startSession(mode) {
-  const pool = selectedPool();
-  if (pool.length === 0) return;
+  startSessionWith(mode, selectedPool());
+}
+/* Drill a specific set of questions (e.g. weak spots) as a normal run so the
+   results are recorded into the stats like any other Learn run. */
+function startDrill(list) {
+  if (!list || !list.length) return;
+  startSessionWith('learn', list.slice());
+}
+function startSessionWith(mode, pool) {
+  if (!pool || pool.length === 0) return;
   session.mode = mode;
   session.review = false;
   session.index = 0;
@@ -361,6 +394,9 @@ function finishSession() {
   const total = scorable.length;
   const pct = total ? Math.round((correct / total) * 100) : 0;
 
+  /* Save progress (real runs only, not when re-reviewing a wrong-answer subset). */
+  if (!session.review && scorable.length) recordRun(scorable);
+
   el('resultTitle').textContent = session.mode === 'learn' ? 'Learn set complete' : 'Exam result';
   el('scoreBig').textContent = `${correct} / ${total}`;
   const skipped = session.questions.length - total;
@@ -423,6 +459,96 @@ function reviewWrong(wrong) {
   renderQuestion();
 }
 
+/* ---------- progress stats view ---------- */
+function buildStats() {
+  const perQ = (loadStats().perQ) || {};
+
+  /* overall: attempts summed across questions */
+  let totSeen = 0, totCorrect = 0, qPractised = 0;
+  ALL.forEach((q) => {
+    const r = perQ[q.id];
+    if (r && r.seen) { totSeen += r.seen; totCorrect += r.correct; qPractised++; }
+  });
+  const overall = el('statsOverall');
+  if (totSeen) {
+    const pct = Math.round((totCorrect / totSeen) * 100);
+    overall.innerHTML =
+      `<div class="score">${pct}%</div>` +
+      `<p class="muted">${qPractised} of ${ALL.length} questions practised · ` +
+      `${totCorrect}/${totSeen} correct over all attempts</p>`;
+  } else {
+    overall.innerHTML =
+      `<p class="muted">No data yet. Finish a Learn or Exam run and your progress appears here.</p>`;
+  }
+
+  /* per chapter (block): accuracy, best & weakest */
+  const chBox = el('statsChapters');
+  chBox.innerHTML = '';
+  const rows = GROUPS.map((g) => {
+    let seen = 0, correct = 0;
+    ALL.forEach((q) => {
+      if (q.block === g.block) { const r = perQ[q.id]; if (r) { seen += r.seen; correct += r.correct; } }
+    });
+    return { g, seen, correct, pct: seen ? correct / seen : null };
+  }).filter((r) => r.seen > 0);
+
+  if (!rows.length) {
+    chBox.innerHTML = '<p class="muted small">No chapter data yet.</p>';
+  } else {
+    let best = rows[0], worst = rows[0];
+    rows.forEach((r) => { if (r.pct > best.pct) best = r; if (r.pct < worst.pct) worst = r; });
+    const showTags = rows.length > 1 && best !== worst;
+    rows.forEach((r) => {
+      const pct = Math.round(r.pct * 100);
+      const isBest = showTags && r === best, isWorst = showTags && r === worst;
+      const tag = isBest ? ' <span class="tag-best">BEST</span>'
+        : isWorst ? ' <span class="tag-worst">WEAKEST</span>' : '';
+      const fillCls = isBest ? 'bar-best' : isWorst ? 'bar-worst' : '';
+      const d = document.createElement('div');
+      d.className = 'chap-row';
+      d.innerHTML =
+        `<div class="chap-top"><span>${esc(r.g.label)}${tag}</span>` +
+        `<span class="muted small">${pct}% · ${r.correct}/${r.seen}</span></div>` +
+        `<div class="chap-bar"><div class="chap-fill ${fillCls}" style="width:${pct}%"></div></div>`;
+      chBox.appendChild(d);
+    });
+  }
+
+  /* hardest questions (most wrong), tappable to review */
+  const hardWrap = el('statsHardWrap');
+  const hardList = el('statsHard');
+  const drillBtn = el('btnDrillWeak');
+  const hard = ALL.map((q) => ({ q, r: perQ[q.id] }))
+    .filter((x) => x.r && x.r.wrong > 0)
+    .sort((a, b) => (b.r.wrong - a.r.wrong) || ((b.r.wrong / b.r.seen) - (a.r.wrong / a.r.seen)));
+  hardList.innerHTML = '';
+  if (hard.length) {
+    hardWrap.hidden = false;
+    hard.slice(0, 30).forEach(({ q, r }) => {
+      const grp = q.block != null ? BLOCK_LABEL[q.block] : '';
+      const d = document.createElement('div');
+      d.className = 'wrong-item';
+      d.innerHTML =
+        `<strong>Q${q.id}.</strong> ${esc(q.question)}<br>` +
+        `<span class="muted small">${esc(grp)} · wrong ${r.wrong} of ${r.seen}</span>`;
+      d.addEventListener('click', () => reviewSingle(q));
+      hardList.appendChild(d);
+    });
+    drillBtn.hidden = false;
+    drillBtn.textContent = `Drill my weak spots (${hard.length})`;
+    drillBtn.onclick = () => startDrill(hard.map((x) => x.q));
+  } else {
+    hardWrap.hidden = true;
+    drillBtn.hidden = true;
+  }
+}
+
+function resetStats() {
+  if (!confirm('Reset all progress stats saved on this device?')) return;
+  try { localStorage.removeItem(STATS_KEY); } catch (_) {}
+  buildStats();
+}
+
 /* ---------- keyboard ---------- */
 function onKeydown(e) {
   if (el('viewQuiz').hidden) return;
@@ -468,6 +594,9 @@ function init() {
   el('btnPrev').addEventListener('click', goPrev);
   el('btnHome').addEventListener('click', () => { buildHome(); showView('viewHome'); });
   el('btnResultHome').addEventListener('click', () => { buildHome(); showView('viewHome'); });
+  el('btnStats').addEventListener('click', () => { buildStats(); showView('viewStats'); });
+  el('btnStatsHome').addEventListener('click', () => { buildHome(); showView('viewHome'); });
+  el('btnResetStats').addEventListener('click', resetStats);
   const btnRefresh = el('btnRefresh');
   if (btnRefresh) btnRefresh.addEventListener('click', forceRefresh);
   document.addEventListener('keydown', onKeydown);
